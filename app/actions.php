@@ -53,7 +53,7 @@ if ($action === 'login') {
 
 if ($action === 'logout') {
     session_destroy();
-    header("Location: index.php");
+    header("Location: /index.php");
     exit;
 }
 
@@ -66,7 +66,7 @@ if ($action === 'update_profile') {
 
     $userId = $_SESSION['user_id'];
     $bio = trim($_POST['bio']);
-    $uploadDir = 'uploads/';
+    $uploadDir = __DIR__ . '/../uploads/';
 
     // Verificar si se intentó subir un archivo
     if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['size'] > 0) {
