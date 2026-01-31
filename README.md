@@ -81,4 +81,5 @@ Notas 3: Uso de IA será válido para el desarrollo, el problema será que en la
 Happy Coding :)
 
 
-php -S localhost:8000 -t public
+
+php -S localhost:8000 router.php
