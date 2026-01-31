@@ -1,5 +1,7 @@
 <?php
 // config/db.php
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../errores.log');
 try {
     // __DIR__ es la carpeta 'config'. 
     // '/../' nos sube un nivel hacia la raíz (SAGAFLEX)

@@ -79,3 +79,6 @@ Notas 2: Cuento con software para detectar plagio, así que procure no dársela 
 Notas 3: Uso de IA será válido para el desarrollo, el problema será que en la defensa se modificará código y se pondrá a resolver a cada uno del grupo lo que hizo, si no lo resuelve, todo el grupo tiene cero automáticamente así el proyecto funcione. Soy experto en detectar quién no trabajó.
 
 Happy Coding :)
+
+
+php -S localhost:8000 -t public

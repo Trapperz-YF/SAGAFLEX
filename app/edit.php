@@ -1,19 +1,43 @@
 <?php
 require_once '../config.php';
 require ROOT_PATH . '/config/db.php';
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header("Location: /app/login.php");
+try {
+    session_start();
+
+    // 1. Verificación de sesión
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: /app/login.php");
+        exit;
+    }
+
+    // 2. Validación de ID en la URL
+    if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+        header("Location: /app/home.php");
+        exit;
+    }
+
+    // 3. Consulta Segura
+    $stmt = $pdo->prepare("SELECT * FROM posts WHERE id = ? AND user_id = ?");
+    $stmt->execute([$_GET['id'], $_SESSION['user_id']]);
+    $post = $stmt->fetch();
+
+    // 4. Verificación de propiedad (Aquí estaba el 'die')
+    if (!$post) {
+        // Lanzamos una excepción para activar el protocolo de error 500
+        throw new Exception("Acceso denegado: El post no existe o no pertenece al usuario.");
+    }
+
+} catch (Throwable $e) {
+    // 5. Manejo de Errores Blindado
+    $currentUser = $_SESSION['user_id'] ?? 'Guest';
+    
+    // Registramos el error técnico en el log del servidor (invisible para el usuario)
+    error_log("[SAGAFLEX CRITICAL] User: $currentUser - Action: Edit View - Error: " . $e->getMessage());
+    
+    // Redirigimos a la página de error estética
+    header("Location: /app/500.php");
     exit;
 }
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    header("Location: /app/home.php");
-    exit;
-}
-$stmt = $pdo->prepare("SELECT * FROM posts WHERE id = ? AND user_id = ?");
-$stmt->execute([$_GET['id'], $_SESSION['user_id']]);
-$post = $stmt->fetch();
-if (!$post) die("Error de acceso.");
 ?>
 <!DOCTYPE html>
 <html lang="es">

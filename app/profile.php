@@ -1,31 +1,62 @@
 <?php
 require_once '../config.php';
 require ROOT_PATH . '/config/db.php';
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header("Location: /app/login.php");
+
+try {
+    session_start();
+
+    // 1. Verificar Sesión
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: /app/login.php");
+        exit;
+    }
+
+    // 2. Validar ID de perfil
+    $profileId = $_GET['user_id'] ?? null;
+    if (empty($profileId)) {
+        header("Location: /app/home.php");
+        exit;
+    }
+
+    // 3. Buscar datos del Usuario
+    $stmtUser = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+    $stmtUser->execute([$profileId]);
+    $userProfile = $stmtUser->fetch();
+
+    if (!$userProfile) {
+        // Lanzamos excepción en lugar de usar die()
+        throw new Exception("Usuario no encontrado (ID: $profileId)");
+    }
+
+    // 4. Lógica para mostrar posts (Dueño vs Visitante)
+    if ($profileId == $_SESSION['user_id']) {
+        // Si soy yo, veo TODO (privado y público)
+        $sql = "SELECT posts.*, 
+                (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) as total_likes, 
+                (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id AND likes.user_id = ?) as liked_by_me 
+                FROM posts WHERE user_id = ? ORDER BY created_at DESC";
+    } else {
+        // Si es otro, solo veo lo PÚBLICO (is_private = 0)
+        $sql = "SELECT posts.*, 
+                (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) as total_likes, 
+                (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id AND likes.user_id = ?) as liked_by_me 
+                FROM posts WHERE user_id = ? AND is_private = 0 ORDER BY created_at DESC";
+    }
+
+    $stmtPosts = $pdo->prepare($sql);
+    $stmtPosts->execute([$_SESSION['user_id'], $profileId]);
+    $posts = $stmtPosts->fetchAll();
+
+    // 5. Determinar modo edición
+    $isEditing = isset($_GET['edit']) && $_GET['edit'] == 'true' && $profileId == $_SESSION['user_id'];
+
+} catch (Throwable $e) {
+    // 6. Protocolo de Error 500
+    $currentUser = $_SESSION['user_id'] ?? 'Guest';
+    error_log("[SAGAFLEX CRITICAL] User: $currentUser - Action: View Profile - Error: " . $e->getMessage());
+    header("Location: /app/500.php");
     exit;
 }
-
-$profileId = $_GET['user_id'] ?? header("Location: /app/home.php");
-
-$stmtUser = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-$stmtUser->execute([$profileId]);
-$userProfile = $stmtUser->fetch();
-if (!$userProfile) die("Usuario no encontrado");
-
-if ($profileId == $_SESSION['user_id']) {
-    $sql = "SELECT posts.*, (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) as total_likes, (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id AND likes.user_id = ?) as liked_by_me FROM posts WHERE user_id = ? ORDER BY created_at DESC";
-    $params = [$_SESSION['user_id'], $profileId];
-} else {
-    $sql = "SELECT posts.*, (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) as total_likes, (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id AND likes.user_id = ?) as liked_by_me FROM posts WHERE user_id = ? AND is_private = 0 ORDER BY created_at DESC";
-    $params = [$_SESSION['user_id'], $profileId];
-}
-$stmtPosts = $pdo->prepare($sql);
-$stmtPosts->execute($params);
-$posts = $stmtPosts->fetchAll();
-
-$isEditing = isset($_GET['edit']) && $_GET['edit'] == 'true' && $profileId == $_SESSION['user_id'];
 ?>
 <!DOCTYPE html>
 <html lang="es">
